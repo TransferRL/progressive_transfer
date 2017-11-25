@@ -1,6 +1,44 @@
 import tensorflow as tf
 import tensorflow.contrib.layers as layers
 
+from prog_nn import InitialColumnProgNN
+from prog_nn import ExtensibleColumnProgNN
+
+def _prog_nn(hiddens, inpt, num_actions, scope, reuse=False, layer_norm=False):
+
+    # topology1 = [inpt.shape[1], hiddens, num_actions]
+    topology1 = [int(inpt.shape[1])]
+    activations = []
+    for hidden in hiddens:
+        activations.append(tf.nn.relu)
+        topology1.append(hidden)
+
+    activations.append(tf.nn.softmax) #TODO: need to change this
+    topology1.append(num_actions)
+
+    session = tf.Session()
+    session.run(tf.global_variables_initializer())
+
+    col_0 = InitialColumnProgNN(topology1, activations, session)
+    # h_0 = col_0.session.run([col_0.h],feed_dict={col_0.o_n: inpt})
+
+    return col_0.h[-1]
+
+def prog_nn(hiddens=[], layer_norm=False):
+    """This model takes as input an observation and returns values of all actions.
+
+    Parameters
+    ----------
+    hiddens: [int]
+        list of sizes of hidden layers
+
+    Returns
+    -------
+    q_func: function
+        q_function for DQN algorithm.
+    """
+    return lambda *args, **kwargs: _prog_nn(hiddens, layer_norm=layer_norm, *args, **kwargs)
+
 
 def _mlp(hiddens, inpt, num_actions, scope, reuse=False, layer_norm=False):
     with tf.variable_scope(scope, reuse=reuse):
