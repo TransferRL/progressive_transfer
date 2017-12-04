@@ -9,12 +9,12 @@ from param_collection import ParamCollection
 # Helper functions.
 def weight_variable(shape, stddev=0.1, initial=None):
     if initial is None:
-        initial = tf.truncated_normal(shape, stddev=stddev, dtype=tf.float64)
+        initial = tf.truncated_normal(shape, stddev=stddev, dtype=tf.float32) #jm
     return tf.Variable(initial)
 
 def bias_variable(shape, init_bias=0.1, initial=None):
     if initial is None:
-        initial = tf.constant(init_bias, shape=shape, dtype=tf.float64)
+        initial = tf.constant(init_bias, shape=shape, dtype=tf.float32) #jm
     return tf.Variable(initial)
 
 class InitialColumnProgNN(object):
@@ -30,14 +30,15 @@ class InitialColumnProgNN(object):
         None - attaches objects to class for InitialColumnProgNN.session.run()
     """
 
-    def __init__(self, topology, activations, session, dtype=tf.float64):
+    def __init__(self, topology, activations, input,  dtype=tf.float32): #jm changed dtyte to 32
         n_input = topology[0]
         # Layers in network.
         L = len(topology) - 1
-        self.session = session
+        # self.session = session
         self.L = L
         self.topology = topology
-        self.o_n = tf.placeholder(dtype,shape=[None, n_input])
+        # self.o_n = tf.placeholder(dtype,shape=[None, n_input])
+        self.o_n = input
 
         self.W = []
         self.b =[]
@@ -50,7 +51,7 @@ class InitialColumnProgNN(object):
             self.h.append(activations[k](tf.matmul(self.h[-1], self.W[k]) + self.b[k]))
             params.append(self.W[-1])
             params.append(self.b[-1])
-        self.pc = ParamCollection(self.session, params)
+        # self.pc = ParamCollection(self.session, params)
 
 
 class ExtensibleColumnProgNN(object):
@@ -68,7 +69,7 @@ class ExtensibleColumnProgNN(object):
         None - attaches objects to class for ExtensibleColumnProgNN.session.run()
     """
 
-    def __init__(self, topology, activations, session, prev_columns, dtype=tf.float64):
+    def __init__(self, topology, activations, session, prev_columns, dtype=tf.float32): #jm change dypte from 64 to 32
         n_input = topology[0]
         self.topology = topology
         self.session = session
@@ -119,11 +120,11 @@ class ExtensibleColumnProgNN(object):
 
 def test_ProgNN():
     # Make some fake observations.
-    fake1 = np.float64(np.random.rand(4000,128))
-    fake2 = np.float64(np.random.rand(4000,128))
-    fake3 = np.float64(np.random.rand(4000,128))
-    fake4 = np.float64(np.random.rand(4000,128))
-    fake5 = np.float64(np.random.rand(4000,128))
+    fake1 = np.float32(np.random.rand(4000,128))
+    fake2 = np.float32(np.random.rand(4000,128))
+    fake3 = np.float32(np.random.rand(4000,128))
+    fake4 = np.float32(np.random.rand(4000,128))
+    fake5 = np.float32(np.random.rand(4000,128))
     n_input = 128
     topology1 = [n_input, 100, 64, 25, 9]
     topology2 = [n_input, 68, 44, 19, 7]

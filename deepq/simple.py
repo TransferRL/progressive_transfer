@@ -167,6 +167,8 @@ def learn(env,
     sess = tf.Session()
     sess.__enter__()
 
+    # file_writer = tf.summary.FileWriter('/home/jeremy/progressive_transfer/logs/', sess.graph)
+
     # capture the shape outside the closure so that the env object is not serialized
     # by cloudpickle when serializing make_obs_ph
     observation_space_shape = env.observation_space.shape
@@ -210,6 +212,10 @@ def learn(env,
     # Initialize the parameters and copy them to the target network.
     U.initialize()
     update_target()
+
+    # file_writer = tf.summary.FileWriter('/home/jeremy/progressive_transfer/logs/', sess.graph)
+    #
+    # return None
 
     episode_rewards = [0.0]
     saved_mean_reward = None

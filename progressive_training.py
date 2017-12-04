@@ -21,8 +21,8 @@ def main():
         buffer_size=50000,
         exploration_fraction=0.1,
         exploration_final_eps=0.1,
-        print_freq=10,
-        param_noise=True
+        print_freq=1,
+        param_noise=False
     )
     print("Saving model to mountaincar_model.pkl")
     act.save("mountaincar_model.pkl")
