@@ -77,6 +77,7 @@ def load(path):
 
 
 def learn(env,
+          env_transfer,
           q_func,
           lr=5e-4,
           max_timesteps=100000,
@@ -172,13 +173,17 @@ def learn(env,
     # capture the shape outside the closure so that the env object is not serialized
     # by cloudpickle when serializing make_obs_ph
     observation_space_shape = env.observation_space.shape
+
+    # def make_obs_ph(name):
+    #     return U.BatchInput(observation_space_shape, name=name)
+
     def make_obs_ph(name):
-        return U.BatchInput(observation_space_shape, name=name)
+        return U.BatchInput((observation_space_shape[0]+env_transfer.observation_space.shape[0],), name=name)
 
     act, train, update_target, debug = deepq.build_train(
         make_obs_ph=make_obs_ph,
         q_func=q_func,
-        num_actions=env.action_space.n,
+        num_actions=env.action_space.n + env_transfer.action_space.n, #jm
         optimizer=tf.train.AdamOptimizer(learning_rate=lr),
         gamma=gamma,
         grad_norm_clipping=10,
@@ -213,13 +218,10 @@ def learn(env,
     U.initialize()
     update_target()
 
-    # file_writer = tf.summary.FileWriter('/home/jeremy/progressive_transfer/logs/', sess.graph)
-    #
-    # return None
-
     episode_rewards = [0.0]
     saved_mean_reward = None
     obs = env.reset()
+    obs_transfer = env_transfer.reset()
     reset = True
     with tempfile.TemporaryDirectory() as td:
         model_saved = False
@@ -243,12 +245,21 @@ def learn(env,
                 kwargs['reset'] = reset
                 kwargs['update_param_noise_threshold'] = update_param_noise_threshold
                 kwargs['update_param_noise_scale'] = True
-            action = act(np.array(obs)[None], update_eps=update_eps, **kwargs)[0]
-            env_action = action
+
+            # action = act(np.array(obs)[None], update_eps=update_eps, **kwargs)[0]
+            # env_action = action
+            obs_input = np.concatenate([obs, obs_transfer])[None] #jm
+            action = act(obs_input, update_eps=update_eps, **kwargs)[0]
+            # env_action = action
+            import pdb; pdb.set_trace()
+            env_action = action[:env.action_space.n]
+            env_action_transfer = action[env.action_space.n:]
+            # import pdb; pdb.set_trace()
+
             reset = False
             new_obs, rew, done, _ = env.step(env_action)
             # Store transition in the replay buffer.
-            replay_buffer.add(obs, action, rew, new_obs, float(done))
+            replay_buffer.add(np.concatenate([obs, obs_transfer]), action, rew, np.concatenate([new_obs, obs_transfer]), float(done))
             obs = new_obs
 
             episode_rewards[-1] += rew
@@ -265,6 +276,7 @@ def learn(env,
                 else:
                     obses_t, actions, rewards, obses_tp1, dones = replay_buffer.sample(batch_size)
                     weights, batch_idxes = np.ones_like(rewards), None
+                # import pdb; pdb.set_trace()
                 td_errors = train(obses_t, actions, rewards, obses_tp1, dones, weights)
                 if prioritized_replay:
                     new_priorities = np.abs(td_errors) + prioritized_replay_eps

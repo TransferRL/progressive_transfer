@@ -6,86 +6,45 @@ from prog_nn import ExtensibleColumnProgNN
 
 def _prog_nn(hiddens, inpt, num_actions, scope, reuse=False, layer_norm=False):
 
-
-    # topology1 = [int(inpt.shape[1])]
-    # activations = []
-    # for hidden in hiddens:
-    #     activations.append(tf.nn.relu)
-    #     topology1.append(hidden)
-    #
-    # activations.append(tf.nn.softmax) #TODO: need to change this
-    # topology1.append(num_actions)
-    #
-    # session = tf.Session()
-    # session.run(tf.global_variables_initializer())
-    #
-    # col_0 = InitialColumnProgNN(topology1, activations, session)
-
-
     # with tf.variable_scope(scope, reuse=reuse):
-    #     topology1 = [int(inpt.shape[1])]
-    #     activations = []
+    #     out = inpt
     #     for hidden in hiddens:
-    #         activations.append(tf.nn.relu)
-    #         topology1.append(hidden)
+    #         out = layers.fully_connected(out, num_outputs=hidden, activation_fn=None)
+    #         if layer_norm:
+    #             out = layers.layer_norm(out, center=True, scale=True)
+    #         out = tf.nn.relu(out)
+    #     q_out = layers.fully_connected(out, num_outputs=num_actions, activation_fn=None)
     #
-    #     activations.append(tf.nn.softmax)  # TODO: need to change this
-    #     topology1.append(num_actions)
-    #     # col_0 = InitialColumnProgNN(topology1, activations, inpt)
+    #     # tf.summary.FileWriter('/home/jeremy/progressive_transfer/logs/', q_out.graph)
+    #     # return None
     #
-    #     # copied
-    #     n_input = topology1[0]
-    #     L = len(topology1) - 1
-    #
-    #     W = []
-    #     b =[]
-    #     h = [inpt]
-    #     for k in range(L):
-    #         shape = topology1[k:k+2]
-    #         W.append(tf.Variable(tf.truncated_normal(shape, stddev=0.1, dtype=tf.float32)))
-    #         b.append(tf.Variable(tf.constant(0.1, shape=[shape[1]], dtype=tf.float32)))
-    #         h.append(activations[k](tf.matmul(h[-1], W[k]) + b[k]))
-    #
-    #     tf.summary.FileWriter('/home/jeremy/progressive_transfer/logs/', h[-1].graph)
-    #     return None
-    #
-    #     return h[-1]
-
-
-    # testing
-    with tf.variable_scope(scope, reuse=reuse):
-        out = inpt
-        for hidden in hiddens:
-            out = layers.fully_connected(out, num_outputs=hidden, activation_fn=None)
-            if layer_norm:
-                out = layers.layer_norm(out, center=True, scale=True)
-            out = tf.nn.relu(out)
-        q_out = layers.fully_connected(out, num_outputs=num_actions, activation_fn=None)
-
-        tf.summary.FileWriter('/home/jeremy/progressive_transfer/logs/', q_out.graph)
-        # return None
-
-        # return q_out
-
+    #     return q_out
 
     with tf.variable_scope(scope, reuse=reuse):
-        w1 = tf.Variable(tf.random_normal([int(inpt.shape[1]), 64]))
-        b1 = tf.Variable(tf.random_normal([64]))
-        w2 = tf.Variable(tf.random_normal([64, num_actions]))
-        b2 = tf.Variable(tf.random_normal([num_actions]))
-        out = inpt
 
-        # for hidden in hiddens:
-        #     out = tf.add(tf.matmul(out, w1), b1)
-        #     out = tf.nn.relu(out)
-        layer1 = tf.add(tf.matmul(out, w1), b1)
+        # import pdb; pdb.set_trace()
+        obs_inpt = inpt[:, 0:2]
+        obs_transfer_inpt = inpt[:, 2:]
+
+        layer1 = layers.fully_connected(obs_inpt, num_outputs=64, activation_fn=None)
+        if layer_norm:
+            layer1 = layers.layer_norm(layer1, center=True, scale=True)
         layer1 = tf.nn.relu(layer1)
-        q_out = tf.add(tf.matmul(layer1, w2), b2)
+        q_out = layers.fully_connected(layer1, num_outputs=3, activation_fn=None)# TODO make this more general
 
-        tf.summary.FileWriter('/home/jeremy/progressive_transfer/logs/', q_out.graph)
-        # return None
+        # extended nn
+        layer1_ext = layers.fully_connected(obs_transfer_inpt, num_outputs=64, activation_fn=None)
+        if layer_norm:
+            layer1_ext = layers.layer_norm(layer1_ext, center=True, scale=True)
+        layer1_ext = tf.nn.relu(layer1_ext)
+        q_out_ext = layers.fully_connected(layer1_ext, num_outputs=5, activation_fn=None)# TODO make this more general
+        prev_bias = layers.fully_connected(layer1, num_outputs=5, activation_fn=None)# TODO make this more general
+        q_out_ext = tf.add(q_out_ext, prev_bias)
 
-        return q_out
+        q_combined = tf.concat([q_out, q_out_ext], axis=1)
+        # import pdb; pdb.set_trace()
+        return q_combined
+        # return q_out
 
 
 

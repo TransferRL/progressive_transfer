@@ -6,15 +6,18 @@ if '/home/jeremy/progressive_transfer' not in sys.path:
 import gym
 import deepq
 from lib.env.mountain_car import MountainCarEnv
+from lib.env.threedmountain_car import ThreeDMountainCarEnv
 
 def main():
     env = MountainCarEnv()
+    env_transfer = ThreeDMountainCarEnv()
     # Enabling layer_norm here is import for parameter space noise!
     # model = deepq.models.mlp([64], layer_norm=True)
     model = deepq.models.prog_nn([64], layer_norm=False)
 
     act = deepq.learn(
         env,
+        env_transfer,
         q_func=model,
         lr=1e-3,
         max_timesteps=100000,
